@@ -20,10 +20,10 @@ class Server{
         Server();
         ~Server();
         void create_connection();
-        void accept_connection();
-        void receive_msg(int clientSocket);
-        void send_msg();
-        void respond(Parser parse);
+        int accept_connection();
+        char* receive_msg(int clientSocket, char* buff, size_t bufferSize);
+        void send_msg(const char* msg, int clientSocket);
+        void respond(Parser parse, int clientSocket);
 
     private:
         int serverSocketFd_;

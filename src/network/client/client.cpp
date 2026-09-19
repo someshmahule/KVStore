@@ -3,6 +3,8 @@
 #include <netinet/in.h>
 #include <string.h>
 #include "client.h"
+#include <vector>
+#include <sstream>
 
 using namespace std;
 
@@ -24,52 +26,65 @@ void Client::send_msg(const char* m){
     send(clientSocketFd_, m, strlen(m), 0);
 }
 
-std::string Client::parseArgs(int argc, char* argv[])
+bool Client::validArgs(const std::string& input)
 {
+    std::stringstream stream(input);
+    std::vector<std::string> args;
+    std::string token;
 
-    std::string message = "";
-    std::string command = argv[1];
-    cout<<command;
-    if (command == "PUT")
+    while(stream >> token)
     {
-        std::string key = argv[2];
-        std::string value = argv[3];
-        message = command + " " + key + " " + value;
-    }
-    else if (command == "GET")
-    {
-        std::string key = argv[2];
-        message = command+ " "+ key;
-    }
-    else
-    {
-        return "";
+        args.push_back(token);
     }
 
+    if(args.size() == 2 && args[0] == "GET")
+    {
+        return true;
+    } 
+
+    if(args.size() == 3 && args[0] == "PUT")
+    {
+        return true;
+    }
     
-    return message;
+    return false;
 
 }
 
 void Client::receive(){
 
-    //recv();
+    char buff[1024] = {0};
+    recv(clientSocketFd_,buff, sizeof(buff), 0);
+    cout<<"Received from server: " << buff <<endl;
 
 }
 
 
 int main(int argc, char* argv[])
 {
-    
-    Client c1;
-    std::string message = c1.parseArgs(argc, argv);
-    if(message == ""){
-        cout<<"Incorrect message should be either"<<endl;
-        cout<<"1. PUT <KEY> <VALUE>"<<endl;
-        cout<<"2. GET <KEY>"<<endl;
-        exit(0);
+    std::string input;
+    Client c;
+    c.connect_server();
+    while(true)
+    {
+        cout<<"KVStore > ";
+        if (!std::getline(std::cin, input))
+        {
+            break;
+        }
+
+        if (input == "exit")
+        {
+            exit(0);
+        }
+        if (!c.validArgs(input)) {
+            cout<<"Incorrect message should be either"<<endl;
+            cout<<"1. PUT <KEY> <VALUE>"<<endl;
+            cout<<"2. GET <KEY>"<<endl;
+            continue;
+        }
+        c.send_msg(input.c_str());
+        c.receive();
     }
-    c1.connect_server();
-    c1.send_msg(message.c_str());
 
 }
