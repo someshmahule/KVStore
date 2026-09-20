@@ -31,30 +31,26 @@ void Server::create_connection()
     listen(serverSocketFd_, 5);
 }
 
-void Server::accept_connection()
+int Server::accept_connection()
 {
         int clientSocket = accept(serverSocketFd_, nullptr, nullptr);
-        receive_msg(clientSocket);
-        close(clientSocket);
+        return clientSocket;
 }
 
-void Server::receive_msg(int clientSocket)
+char* Server::receive_msg(int clientSocket, char* buffer, size_t bufferSize)
 {
-        char buffer[1024] = {0};
-        ssize_t bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        ssize_t bytesReceived = recv(clientSocket, buffer, bufferSize, 0);
         buffer[bytesReceived] = '\0';
         cout<< "Client : " << buffer<< "\n";
-        Parser clientMsg(buffer);
-        respond(clientMsg);
-        
+        return buffer;
 }
 
-void Server::send_msg()
+void Server::send_msg(const char* msg, int clientSocket)
 {
-
+    send(clientSocket, msg, strlen(msg), 0);
 }
 
-void Server::respond(Parser msg)
+void Server::respond(Parser msg, int clientSocket)
 {
     
     vector<string> toks = msg.parseBuffer();
@@ -63,21 +59,26 @@ void Server::respond(Parser msg)
     {
         int ret = kvs_.insertKey(toks[1],toks[2]);
         if (ret != 0){
-            cout<<"Server : Insert failed\n"<<endl;
+            const char* res = "Server : Insert failed\n";
+            send_msg(res, clientSocket);
         }
         else
         {
-            cout<<"Server : Inserted key: "<< toks[1]<<endl;
+            string res = "OK"; //successful insert
+            send_msg(res.c_str(), clientSocket);
         }
     }
     else if (command == "GET")
     {
+        string res;
         string value = kvs_.findKey(toks[1]);
         if(value != ""){
-            cout<<"Server : Value: " << value<<endl;
+            res = value;
+            send_msg(res.c_str(), clientSocket);
         }
         else{
-            cout<<"Server : Key not found"<<endl;
+            res = "NOT_FOUND";
+            send_msg(res.c_str(), clientSocket);
         }
     }
     else{
@@ -90,8 +91,13 @@ int main()
     Server s1;
     s1.create_connection();
     cout << "Server is listening:.... \n";
+    int clientSocketFD_ = s1.accept_connection();
     while(true){
-        s1.accept_connection();
+        char buff[1024] = {0};
+        s1.receive_msg(clientSocketFD_, buff, sizeof(buff));
+        Parser clientMsg(buff);
+        s1.respond(clientMsg, clientSocketFD_);
     }
+    close(clientSocketFD_);
     return 0;
 }

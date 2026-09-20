@@ -10,7 +10,7 @@ class Client{
         void connect_server();
         void send_msg(const char* message);
         void receive();
-        std::string parseArgs(int argc, char* argv[]);
+        bool validArgs(const std::string& s);
 
     private:
         int clientSocketFd_;
