@@ -21,7 +21,7 @@ class Server{
         ~Server();
         void create_connection();
         int accept_connection();
-        char* receive_msg(int clientSocket, char* buff, size_t bufferSize);
+        int receive_msg(int clientSocket, char* buff, size_t bufferSize, int* end);
         void send_msg(const char* msg, int clientSocket);
         void respond(Parser parse, int clientSocket);
 

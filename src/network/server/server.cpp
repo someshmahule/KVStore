@@ -37,12 +37,15 @@ int Server::accept_connection()
         return clientSocket;
 }
 
-char* Server::receive_msg(int clientSocket, char* buffer, size_t bufferSize)
+int Server::receive_msg(int clientSocket, char* buffer, size_t bufferSize, int* end)
 {
         ssize_t bytesReceived = recv(clientSocket, buffer, bufferSize, 0);
-        buffer[bytesReceived] = '\0';
+        if (buffer[bytesReceived] == '\n'){
+            buffer[bytesReceived] = '\0';
+            *end = 1;
+        }
         cout<< "Client : " << buffer<< "\n";
-        return buffer;
+        return bytesReceived;
 }
 
 void Server::send_msg(const char* msg, int clientSocket)
@@ -91,13 +94,31 @@ int main()
     Server s1;
     s1.create_connection();
     cout << "Server is listening:.... \n";
-    int clientSocketFD_ = s1.accept_connection();
-    while(true){
-        char buff[1024] = {0};
-        s1.receive_msg(clientSocketFD_, buff, sizeof(buff));
-        Parser clientMsg(buff);
-        s1.respond(clientMsg, clientSocketFD_);
+    while(true)
+    {
+        int clientSocketFD_ = s1.accept_connection();
+        int endFlag = 0;
+        while(true){
+            char buff[1024] = {0};
+            int response = s1.receive_msg(clientSocketFD_, buff, sizeof(buff), &endFlag);
+            if(response == 0){
+                cout<<"Response " << response <<"\n";
+                close(clientSocketFD_);
+                break;
+            }
+            else if(response == -1){
+                cout<<"Client disconnected unexpectedly"<<"\n";
+                break;
+            }
+            //data 
+            if (endFlag == 1){
+                Parser clientMsg(buff);
+                s1.respond(clientMsg, clientSocketFD_);
+                endFlag = 0;
+            }
+            
+        }
     }
-    close(clientSocketFD_);
+    
     return 0;
 }
